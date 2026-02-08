@@ -1,0 +1,183 @@
+<div class="file-manager-container" 
+     (dragover)="onDragOver($event)" 
+     (dragleave)="onDragLeave($event)" 
+     (drop)="onDrop($event)">
+  <div class="file-manager-card" [class.drag-over-active]="isDragging()">
+    
+   
+    @if (isDragging()) {
+      <div class="drag-overlay">
+        <div class="drag-message">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Drop files to upload</span>
+        </div>
+      </div>
+    }
+
+    <div class="card-header">
+      <div class="header-actions">
+        <button class="btn btn-primary" (click)="openCreateFolderModal()">New Folder</button>
+        <input type="file" #fileInput (change)="onFileSelected($event)" multiple style="display: none">
+        <button class="btn btn-secondary" (click)="fileInput.click()">Upload Files</button>
+      </div>
+      <div class="breadcrumbs">
+        <span class="crumb" (click)="navigateToFolder(null)" [class.active]="!currentParentId()">Root</span>
+        @for (crumb of breadcrumb(); track crumb.id) {
+            <span class="separator">/</span>
+            <span class="crumb" (click)="navigateToFolder(crumb.id)" [class.active]="crumb.id === currentParentId()">
+                {{ crumb.name }}
+            </span>
+        }
+      </div>
+    </div>
+
+    <div class="content">
+      @if (isLoading()) {
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      }
+      
+      @if (!isLoading()) {
+        <div class="file-list">
+          @for (item of items(); track item.id) {
+            <div class="file-item">
+              
+             
+              <div class="item-main" (click)="item.folder ? navigateToFolder(item.id) : null">
+                <div class="item-icon">
+                  
+                  @if (item.folder) {
+                    <span class="icon">📁</span>
+                  } @else {
+                    <span class="icon">📄</span>
+                  }
+                </div>
+                <div class="item-details">
+                  <div class="item-name">{{ item.name }}</div>
+                  <div class="item-meta">
+                    <span class="date">{{ item.creation | date:'MMM d, y' }}</span>
+                    @if (!item.folder) {
+                      <span class="size meta-separator">• {{ item.size }} bytes</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+       
+              <div class="item-actions">
+                  
+                  @if (!item.folder) {
+                    <button class="action-btn download-btn" (click)="downloadItem(item)" title="Download">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="2" y="2" width="20" height="20" fill="#DBEAFE" stroke="none" rx="4" />
+                          <path d="M8 12L12 16L16 12" />
+                          <path d="M12 8V16" />
+                        </svg>
+                    </button>
+                  }
+                  
+                
+                  <button class="action-btn edit-btn" (click)="openRenameModal(item)" title="Rename">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                  </button>
+                  
+           
+                  <button class="action-btn move-btn" (click)="openMoveModal(item)" title="Move">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 17 4 12 9 7"></polyline>
+                        <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                      </svg>
+                  </button>
+
+                  <button class="action-btn delete-btn" (click)="openDeleteModal(item)" title="Delete">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                      </svg>
+                  </button>
+              </div>
+
+            </div>
+          } @empty {
+            <div class="empty-state">
+                No items found.
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@defer (when isModalOpen()) {
+<app-modal 
+  [isOpen]="isModalOpen()" 
+  [title]="modalTitle()" 
+  [confirmLabel]="modalConfirmLabel()"
+  (confirm)="onModalConfirm()"
+  (cancel)="onModalCancel()">
+  
+  @if (modalType() === 'create' || modalType() === 'rename') {
+    <div class="form-group">
+      <label for="modalInput">Name</label>
+      <input 
+        type="text" 
+        id="modalInput" 
+        class="form-control" 
+        [ngModel]="modalInputValue()" 
+        (ngModelChange)="modalInputValue.set($event)"
+        (keyup.enter)="onModalConfirm()"
+        autofocus>
+    </div>
+  }
+
+  @if (modalType() === 'delete') {
+    <p>Are you sure you want to delete <strong>{{ selectedItem()?.name }}</strong>?</p>
+    @if (selectedItem()?.folder) {
+      <p class="text-danger">Note: The folder must be empty before it can be deleted.</p>
+    }
+  }
+
+  @if (modalType() === 'move') {
+    <div class="move-browser">
+         <div class="move-breadcrumbs">
+            <span class="crumb" (click)="navigateMoveFolder(null)" [class.active]="!currentMoveParentId()">Root</span>
+            @for (crumb of moveBreadcrumb(); track crumb.id) {
+                <span class="separator">/</span>
+                <span class="crumb" (click)="navigateMoveFolder(crumb.id)" [class.active]="crumb.id === currentMoveParentId()">
+                    {{ crumb.name }}
+                </span>
+            }
+         </div>
+         <p class="move-instruction">Or select a folder in the list below</p>
+         <div class="move-list">
+             @if (currentMoveParentId()) {
+                <div class="move-item back-item" (click)="navigateMoveFolder(moveBreadcrumb().length > 1 ? moveBreadcrumb()[moveBreadcrumb().length - 2].id : null)">
+                    <span class="icon">⬆️</span> ..
+                </div>
+             }
+             @for (folder of moveFolderItems(); track folder.id) {
+                <div class="move-item" (click)="navigateMoveFolder(folder.id)">
+                    <span class="icon">📁</span> {{ folder.name }}
+                </div>
+             } @empty {
+                <div class="empty-move">
+                    No subfolders
+                </div>
+             }
+         </div>
+    </div>
+  }
+
+</app-modal>
+}

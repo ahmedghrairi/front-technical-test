@@ -1,0 +1,17 @@
+@if (isOpen()) {
+  <div class="modal-overlay" (click)="onOverlayClick($event)">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>{{ title() }}</h3>
+        <button class="close-btn" (click)="onCancel()">×</button>
+      </div>
+      <div class="modal-content">
+        <ng-content></ng-content>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="onConfirm()">{{ confirmLabel() }}</button>
+      </div>
+    </div>
+  </div>
+}
